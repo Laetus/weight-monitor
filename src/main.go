@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
+	"text/template"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -18,7 +20,19 @@ type Entry struct {
 var entries []Entry
 
 func homeLink(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Welcome home!")
+	// path is relative to project root
+	const templatePath string = "src/templates/index.html"
+	tmpl, err := template.ParseFiles(templatePath)
+	log.Println("template loaded")
+
+	if err != nil {
+		fmt.Fprintf(w, "Something went wrong :-(")
+	}
+	sort.Slice(entries, func(a, b int) bool {
+		return entries[a].Date.Before(entries[b].Date)
+	})
+	log.Println("Entries sorted")
+	tmpl.Execute(w, entries)
 }
 
 func createWeight(w http.ResponseWriter, r *http.Request) {
