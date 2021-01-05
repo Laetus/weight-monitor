@@ -21,17 +21,17 @@ var entries []Entry
 
 func homeLink(w http.ResponseWriter, r *http.Request) {
 	// path is relative to project root
-	const templatePath string = "src/templates/index.html"
+	const templatePath string = "templates/index.html"
 	tmpl, err := template.ParseFiles(templatePath)
 	log.Println("template loaded")
 
-	if err != nil {
+	if err != nil || tmpl == nil {
 		fmt.Fprintf(w, "Something went wrong :-(")
+		return
 	}
 	sort.Slice(entries, func(a, b int) bool {
 		return entries[a].Date.Before(entries[b].Date)
 	})
-	log.Println("Entries sorted")
 	tmpl.Execute(w, entries)
 }
 

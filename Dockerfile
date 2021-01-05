@@ -15,14 +15,17 @@ COPY go.sum .
 RUN go mod download
 
 # Copy the code into the container
-COPY src/ .
+COPY src/ src 
+COPY templates/ templates 
 
 # Build the application
-RUN go build -o main main.go
+RUN go build -o main src/main.go
 
 # Build a small image
 FROM scratch
 COPY --from=builder /build/main /
+COPY templates/ /templates/ 
+
 
 # Expose port
 EXPOSE 8080
