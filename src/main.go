@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"text/template"
 	"time"
 
@@ -19,6 +20,15 @@ type Entry struct {
 
 var entries []Entry
 
+func saveEntry(entry Entry) {
+	// Limit entries length to 10 to avoid pagination and memory issues
+	if len(entries) > 10 {
+		_, entries = entries[0], entries[1:]
+	}
+	entries = append(entries, entry)
+
+}
+
 func homeLink(w http.ResponseWriter, r *http.Request) {
 	// path is relative to project root
 	const templatePath string = "templates/index.html"
@@ -29,9 +39,21 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Something went wrong :-(")
 		return
 	}
+
+	keys, ok := r.URL.Query()["weight"]
+	if ok && len(keys) == 1 {
+		weight, err := strconv.ParseFloat(keys[0], 64)
+		if err == nil {
+			log.Println(weight)
+			entry := Entry{weight, time.Now()}
+			saveEntry(entry)
+		}
+	}
+
 	sort.Slice(entries, func(a, b int) bool {
-		return entries[a].Date.Before(entries[b].Date)
+		return entries[a].Date.After(entries[b].Date)
 	})
+	w.Header().Add("Content-Type", "text/html")
 	tmpl.Execute(w, entries)
 }
 
@@ -47,11 +69,7 @@ func createWeight(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(entry)
 
-	// Limit entries length to 10 to avoid pagination and memory issues
-	if len(entries) > 10 {
-		_, entries = entries[0], entries[1:]
-	}
-	entries = append(entries, entry)
+	saveEntry(entry)
 	json.NewEncoder(w).Encode(entries)
 }
 

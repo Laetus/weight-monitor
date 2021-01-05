@@ -1,8 +1,31 @@
-<h1>Hello World</h1>
+<html>
+    <head>
+    </head>
+    <body>
+        <h1>Weight Monitor</h1>
+        <p>Some christmas vacation pet coding project. Don't submit any personal data and expect anything from it.</p>
 
-<h2>Your recorded entries</h2>
-<ol>
-    {{range . }}
-    <li>{{.Date.Format "02 Jan 2006 at 15.04.05" }}: {{.Weight }}kg</li>
-    {{end}}
-</ol>
+        <h2>Record weight</h2>
+
+        <form action="" method="GET">
+            <input type="number" min="0", max="1000" step="0.1" name="weight">
+            <input type="submit">
+        </form>
+
+        <h2>Your recorded entries</h2>
+        <table>
+            <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Weight in kg</th>
+            </tr>
+            {{ range . }}
+            <tr>
+                <td>{{.Date.Format "02 Jan 2006" }}</td>
+                <td>{{.Date.Format "15.04.05" }}</td>
+                <td>{{.Weight }}</td>
+            </tr>
+            {{end}}
+        </table>
+    </body>
+</html>

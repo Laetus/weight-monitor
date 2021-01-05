@@ -24,6 +24,6 @@ steps:
     - '1'
     - '--port'
     - '8080'
-    - '--allow-unauthenticated'
+    - '--no-allow-unauthenticated'
 images:
   - 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'
