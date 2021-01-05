@@ -2,7 +2,7 @@
 
 <h2>Your recorded entries</h2>
 <ol>
-    {{range .}}
-    <li>{{.Date.Format "02 Jan 2006 15:04:05"}}: {{.Weight}}kg</li>
+    {{range . }}
+    <li>{{.Date.Format "02 Jan 2006 at 15.04.05" }}: {{.Weight }}kg</li>
     {{end}}
 </ol>
