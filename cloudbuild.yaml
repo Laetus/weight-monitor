@@ -5,25 +5,15 @@ steps:
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA']
-  # Deploy container image to Cloud Run
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: bash 
     args:
-    - 'run'
-    - 'deploy'
-    - '$REPO_NAME'
-    - '--image'
-    - 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'
-    - '--region'
-    - 'europe-west3'
-    - '--platform'
-    - 'managed'
-    - '--project'
-    - 'hardly-evolving-hawk'
-    - '--max-instances'
-    - '1'
-    - '--port'
-    - '8080'
-    - '--no-allow-unauthenticated'
+    - '-xeEuo'
+    - 'pipefail'
+    - '-c'
+    - |-
+      gcloud run deploy $REPO_NAME --image=eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA --region=europe-west3 --project=${_PROJECT_ID} --max-instances=1 --port=8080 --allow-unauthenticated  --platform=managed -q  --set-env-vars=OAUTH_CLIENT_ID=1012120894645-avj9dintmdcqjoemlm1ot5evge39c39o.apps.googleusercontent.com
+substitutions:
+  _PROJECT_ID: hardly-evolving-hawk
 images:
   - 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'

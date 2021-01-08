@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type Entry struct {
@@ -18,7 +20,25 @@ type Entry struct {
 	Date   time.Time `json:"date,omitempty"`
 }
 
+type Config struct {
+	OauthClientId string `split_words:"true"`
+}
+
+type IndexData struct {
+	Config  Config
+	Entries []Entry
+}
+
+func trimOauthClientId() {
+	splits := strings.Split(config.OauthClientId, "/")
+	if len(splits) == 1 {
+		return
+	}
+	config.OauthClientId = splits[len(splits)-1]
+}
+
 var entries []Entry
+var config Config
 
 func saveEntry(entry Entry) {
 	// Limit entries length to 10 to avoid pagination and memory issues
@@ -33,7 +53,6 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 	// path is relative to project root
 	const templatePath string = "templates/index.html"
 	tmpl, err := template.ParseFiles(templatePath)
-	log.Println("template loaded")
 
 	if err != nil || tmpl == nil {
 		fmt.Fprintf(w, "Something went wrong :-(")
@@ -54,10 +73,24 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 		return entries[a].Date.After(entries[b].Date)
 	})
 	w.Header().Add("Content-Type", "text/html")
-	tmpl.Execute(w, entries)
+	tmpl.Execute(w, IndexData{config, entries})
+}
+
+func validate(r *http.Request) bool {
+	token := r.Header.Get("Authorization")
+	if token == "" {
+		return false
+	}
+
+	return strings.Replace(token, "Bearer ", "", 1) != ""
 }
 
 func createWeight(w http.ResponseWriter, r *http.Request) {
+	if !validate(r) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 
 	entry := Entry{-1, time.Now()}
@@ -66,10 +99,11 @@ func createWeight(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+	} else {
+		saveEntry(entry)
 	}
-	log.Println(entry)
 
-	saveEntry(entry)
 	json.NewEncoder(w).Encode(entries)
 }
 
@@ -86,6 +120,13 @@ func commonMiddleware(next http.Handler) http.Handler {
 
 func main() {
 	entries = []Entry{}
+
+	err := envconfig.Process("", &config)
+	if err != nil {
+		log.Println("Config could not be loaded.")
+		log.Fatal(err.Error())
+	}
+
 	router := mux.NewRouter().StrictSlash(true)
 	router.Use(commonMiddleware)
 	router.HandleFunc("/", homeLink)

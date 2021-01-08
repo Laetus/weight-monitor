@@ -1,16 +1,21 @@
 <html>
     <head>
+        <meta name="google-signin-scope" content="profile email">
+        <meta name="google-signin-client_id" content="{{ $.Config.OauthClientId }}">
+        <script src="https://apis.google.com/js/platform.js" async defer></script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     </head>
     <body>
         <h1>Weight Monitor</h1>
         <p>Some christmas vacation pet coding project. Don't submit any personal data and expect anything from it.</p>
 
+        <h2>Login via Google</h2>
+        <div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div>
+
         <h2>Record weight</h2>
 
-        <form action="" method="GET">
-            <input type="number" min="0", max="1000" step="0.1" name="weight">
-            <input type="submit">
-        </form>
+        <input type="number" min="0", max="1000" step="0.1" id="weight" value=45>
+        <input type="submit" id="submitButton">
 
         <h2>Your recorded entries</h2>
         <table>
@@ -19,7 +24,7 @@
                 <th>Time</th>
                 <th>Weight in kg</th>
             </tr>
-            {{ range . }}
+            {{ range .Entries }}
             <tr>
                 <td>{{.Date.Format "02 Jan 2006" }}</td>
                 <td>{{.Date.Format "15.04.05" }}</td>
@@ -27,5 +32,43 @@
             </tr>
             {{end}}
         </table>
+        <script>
+            function onSignIn(googleUser) {
+                // Useful data for your client-side scripts:
+                var profile = googleUser.getBasicProfile();
+                console.log("ID: " + profile.getId()); // Don't send this directly to your server!
+                console.log('Full Name: ' + profile.getName());
+                console.log('Given Name: ' + profile.getGivenName());
+                console.log('Family Name: ' + profile.getFamilyName());
+                console.log("Image URL: " + profile.getImageUrl());
+                console.log("Email: " + profile.getEmail());
+                // The ID token you need to pass to your backend:
+                var id_token = googleUser.getAuthResponse().id_token;
+                console.log("ID Token: " + id_token);
+
+            $(document).ready(function(){
+                $('#submitButton').on('click',function(){
+                    console.log(JSON.stringify({
+                            "weight": parseFloat($('#weight').val())
+                        }))
+                    $.ajax({
+                        url: "/weight",
+                        type: 'POST',
+                        data: JSON.stringify({
+                            "weight": parseFloat($('#weight').val())
+                        }),
+                        contentType: 'application/json',
+                        headers: {
+                            "Authorization": "Bearer " + id_token 
+                        },
+                        async: true 
+                    }).done(function() {
+                        location.reload();
+                    })
+                })
+            });
+
+            }
+        </script>
     </body>
 </html>
