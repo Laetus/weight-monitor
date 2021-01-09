@@ -6,6 +6,9 @@ ENV GO111MODULE=on \
     GOOS=linux \
     GOARCH=amd64
 
+# Get HTTPS certificates 
+RUN apk add --no-cache ca-certificates
+
 # Move to working directory /build
 WORKDIR /build
 
@@ -26,6 +29,8 @@ FROM scratch
 COPY --from=builder /build/main /
 COPY templates/ /templates/ 
 
+# Get HTTPS certificates 
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt 
 
 # Expose port
 EXPOSE 8080
