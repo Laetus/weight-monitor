@@ -14,24 +14,26 @@
 
         <h2>Record weight</h2>
 
-        <input type="number" min="0", max="1000" step="0.1" id="weight" value=45>
+        <input type="number" min="0", max="1000" step="0.1" id="weight">
         <input type="submit" id="submitButton">
 
-        <h2>Your recorded entries</h2>
-        <table>
-            <tr>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Weight in kg</th>
-            </tr>
-            {{ range .Entries }}
-            <tr>
-                <td>{{.Date.Format "02 Jan 2006" }}</td>
-                <td>{{.Date.Format "15.04.05" }}</td>
-                <td>{{.Weight }}</td>
-            </tr>
-            {{end}}
-        </table>
+            <h2>Your recorded entries</h2>
+            <table>
+        {{ if .Entries }}
+                <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Weight in kg</th>
+                </tr>
+                {{ range .Entries }}
+                <tr>
+                    <td>{{.Date.Format "02 Jan 2006" }}</td>
+                    <td>{{.Date.Format "15.04.05" }}</td>
+                    <td>{{.Weight }}</td>
+                </tr>
+                {{end}}
+        {{end}}
+            </table>
         <script>
             function onSignIn(googleUser) {
                 // Useful data for your client-side scripts:
@@ -63,7 +65,21 @@
                         },
                         async: true 
                     }).done(function() {
-                        location.reload();
+                        console.log('done')
+                        $.ajax({
+                            url: "/",
+                            type: 'GET',
+                            contentType: 'text/html',
+                            headers: {
+                                "Authorization": "Bearer " + id_token 
+                            },
+                            async: true ,
+                            success: function(response) {
+                                var table = response.substring(response.indexOf("<table>")+6, response.indexOf("</table>"));
+                                $("table").html(table);
+                             }
+                                        
+                        })
                     })
                 })
             });

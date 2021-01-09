@@ -13,6 +13,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/kelseyhightower/envconfig"
+	"google.golang.org/api/oauth2/v2"
 )
 
 type Entry struct {
@@ -37,25 +38,51 @@ func trimOauthClientId() {
 	config.OauthClientId = splits[len(splits)-1]
 }
 
+func validate(r *http.Request) (*oauth2.Tokeninfo, error) {
+	idToken := r.Header.Get("Authorization")
+
+	idToken = strings.Replace(idToken, "Bearer ", "", 1)
+
+	oauth2Service, err := oauth2.New(httpClient)
+	tokenInfoCall := oauth2Service.Tokeninfo()
+	tokenInfoCall.IdToken(idToken)
+	tokenInfo, err := tokenInfoCall.Do()
+	return tokenInfo, err
+}
+
 var entries []Entry
 var config Config
+var httpClient = &http.Client{}
 
 func saveEntry(entry Entry) {
+	sortEntries()
 	// Limit entries length to 10 to avoid pagination and memory issues
-	if len(entries) > 10 {
-		_, entries = entries[0], entries[1:]
+	if len(entries) > 9 {
+		entries = entries[:len(entries)-1]
 	}
 	entries = append(entries, entry)
 
+}
+
+func sortEntries() {
+	sort.Slice(entries, func(a, b int) bool {
+		return entries[a].Date.After(entries[b].Date)
+	})
 }
 
 func homeLink(w http.ResponseWriter, r *http.Request) {
 	// path is relative to project root
 	const templatePath string = "templates/index.html"
 	tmpl, err := template.ParseFiles(templatePath)
-
 	if err != nil || tmpl == nil {
 		fmt.Fprintf(w, "Something went wrong :-(")
+		return
+	}
+
+	_, authErr := validate(r)
+	if authErr != nil {
+		w.Header().Add("Content-Type", "text/html")
+		tmpl.Execute(w, IndexData{config, make([]Entry, 0)})
 		return
 	}
 
@@ -63,30 +90,18 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 	if ok && len(keys) == 1 {
 		weight, err := strconv.ParseFloat(keys[0], 64)
 		if err == nil {
-			log.Println(weight)
 			entry := Entry{weight, time.Now()}
 			saveEntry(entry)
 		}
 	}
-
-	sort.Slice(entries, func(a, b int) bool {
-		return entries[a].Date.After(entries[b].Date)
-	})
+	sortEntries()
 	w.Header().Add("Content-Type", "text/html")
 	tmpl.Execute(w, IndexData{config, entries})
 }
 
-func validate(r *http.Request) bool {
-	token := r.Header.Get("Authorization")
-	if token == "" {
-		return false
-	}
-
-	return strings.Replace(token, "Bearer ", "", 1) != ""
-}
-
 func createWeight(w http.ResponseWriter, r *http.Request) {
-	if !validate(r) {
+	_, err := validate(r)
+	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -95,9 +110,10 @@ func createWeight(w http.ResponseWriter, r *http.Request) {
 
 	entry := Entry{-1, time.Now()}
 
-	err := decoder.Decode(&entry)
+	err = decoder.Decode(&entry)
 
-	if err != nil {
+	log.Println(entry.Weight)
+	if err != nil || entry.Weight <= 0 {
 		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
@@ -108,6 +124,12 @@ func createWeight(w http.ResponseWriter, r *http.Request) {
 }
 
 func listWeights(w http.ResponseWriter, r *http.Request) {
+	_, err := validate(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	sortEntries()
 	json.NewEncoder(w).Encode(entries)
 }
 
