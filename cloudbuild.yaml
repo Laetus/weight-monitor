@@ -1,14 +1,15 @@
 steps:
   # build docker container image
-  - name: 'gcr.io/cloud-builders/docker'
-    args: [ 'build', '-t', 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA', '.' ]
-  # Push the container image to Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA']
-    id: 'push'
+  - name: 'gcr.io/kaniko-project/executor:latest'
+    id: 'build'
+    args:
+    - --destination=eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA
+    - --cache=true
+    - --cache-ttl=10h
   - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'deploy dev'
     entrypoint: bash 
-    waitFor: ['push']
+    waitFor: ['build']
     args:
     - '-xeEuo'
     - 'pipefail'
@@ -16,8 +17,9 @@ steps:
     - |-
       gcloud run deploy $REPO_NAME --image=eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA --region=europe-west1 --project=${_PROJECT_ID} --max-instances=1 --port=8080 --allow-unauthenticated  --platform=managed -q  --set-env-vars=OAUTH_CLIENT_ID=1012120894645-bc5bqb3becnf0gd7rsvqlaglm46fakcm.apps.googleusercontent.com
   - name: 'gcr.io/cloud-builders/gcloud'
+    id: 'deploy production'
     entrypoint: bash 
-    waitFor: ['push']
+    waitFor: ['build']
     args:
     - '-xeEuo'
     - 'pipefail'
@@ -27,5 +29,3 @@ steps:
 substitutions:
   _PROJECT_ID: hardly-evolving-hawk
   _PROD_PROJECT_ID: apparently-lucky-dan 
-images:
-  - 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'
