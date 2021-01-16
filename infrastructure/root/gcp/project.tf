@@ -1,13 +1,3 @@
-locals {
-  folder_id = 507359599160
-
-  services = [
-    "appengine.googleapis.com",
-    "run.googleapis.com",
-    "iap.googleapis.com",
-  ]
-}
-
 resource "random_pet" "project_id" {
   length = 3
 }
@@ -39,16 +29,10 @@ resource "google_iap_brand" "this" {
   project           = google_project.this.project_id
 }
 
-// This service account needs read permissions on the Container Registry Bucket otherwise the cloud
-// run deployments fails
-output "cloud_run_service_account" {
-  value = "service-${google_project.this.number}@serverless-robot-prod.iam.gserviceaccount.com"
-}
-
 // Setup firestore instance
 resource "google_app_engine_application" "this" {
-  project     = google_project.this.project_id
-  location_id = "europe-west"
+  project       = google_project.this.project_id
+  location_id   = "europe-west"
   database_type = "CLOUD_FIRESTORE"
 }
 

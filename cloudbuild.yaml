@@ -5,15 +5,27 @@ steps:
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: ['push', 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA']
+    id: 'push'
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: bash 
+    waitFor: ['push']
     args:
     - '-xeEuo'
     - 'pipefail'
     - '-c'
     - |-
-      gcloud run deploy $REPO_NAME --image=eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA --region=europe-west3 --project=${_PROJECT_ID} --max-instances=1 --port=8080 --allow-unauthenticated  --platform=managed -q  --set-env-vars=OAUTH_CLIENT_ID=1012120894645-avj9dintmdcqjoemlm1ot5evge39c39o.apps.googleusercontent.com
+      gcloud run deploy $REPO_NAME --image=eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA --region=europe-west1 --project=${_PROJECT_ID} --max-instances=1 --port=8080 --allow-unauthenticated  --platform=managed -q  --set-env-vars=OAUTH_CLIENT_ID=1012120894645-bc5bqb3becnf0gd7rsvqlaglm46fakcm.apps.googleusercontent.com
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: bash 
+    waitFor: ['push']
+    args:
+    - '-xeEuo'
+    - 'pipefail'
+    - '-c'
+    - |-
+      gcloud run deploy $REPO_NAME --image=eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA --region=europe-west1 --project=${_PROD_PROJECT_ID} --max-instances=1 --port=8080 --allow-unauthenticated  --platform=managed -q  --set-env-vars=OAUTH_CLIENT_ID=466000140433-884n905lg8aqmsvvtneisv370h9uo0rl.apps.googleusercontent.com
 substitutions:
   _PROJECT_ID: hardly-evolving-hawk
+  _PROD_PROJECT_ID: apparently-lucky-dan 
 images:
   - 'eu.gcr.io/$PROJECT_ID/$REPO_NAME:$COMMIT_SHA'

@@ -16,6 +16,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/oauth2/v2"
 )
 
@@ -89,7 +90,7 @@ func getUserDoc(userTokeninfo *oauth2.Tokeninfo) *firestore.DocumentRef {
 	})
 
 	if err != nil {
-		log.Println("failed to get user reference")
+		log.Printf("failed to get user reference for user %s: \n %s", id, err)
 		return nil
 	}
 	return firestoreClient.Collection("users").Doc(id)
@@ -128,13 +129,16 @@ func getEntries(userTokeninfo *oauth2.Tokeninfo) []Entry {
 	for {
 		doc, err := iter.Next()
 		if err != nil {
-			log.Println(err)
+			if err != iterator.Done {
+				log.Println(err)
+			}
 			break
 		}
 		var entry Entry
 		doc.DataTo(&entry)
 		entries = append(entries, entry)
 	}
+	log.Printf("finished loading entries: %s", entries)
 	return entries
 }
 
