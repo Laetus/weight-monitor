@@ -119,7 +119,6 @@ func GetEntries(userTokeninfo *oauth2.Tokeninfo) []Entry {
 		doc.DataTo(&entry)
 		entries = append(entries, entry)
 	}
-	log.Printf("finished loading entries: %s", entries)
 	return entries
 }
 
@@ -158,8 +157,8 @@ func listWeights(w http.ResponseWriter, r *http.Request) {
 }
 
 func SetupSubrouter(subrouter *mux.Router) *mux.Router {
-	subrouter.HandleFunc("/", listWeights).Methods("GET")
-	subrouter.HandleFunc("/", createWeight).Methods("POST")
+	subrouter.HandleFunc("", listWeights).Methods("GET")
+	subrouter.HandleFunc("", createWeight).Methods("POST")
 	subrouter.Use(commonMiddleware)
 	return subrouter
 }
