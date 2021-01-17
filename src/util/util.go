@@ -6,12 +6,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-func Hello() string {
-	str := "Hello World"
-	log.Println(str)
-	return str
-}
-
 type Config struct {
 	OauthClientId string `split_words:"true"`
 	EntriesLimit  int    `default:"100",split_words:true`
