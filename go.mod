@@ -1,4 +1,4 @@
-module weight-monitor
+module weightmonitor
 
 go 1.15
 

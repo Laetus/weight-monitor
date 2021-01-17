@@ -7,13 +7,12 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"text/template"
 	"time"
+	"weightmonitor/src/util"
 
 	"cloud.google.com/go/firestore"
 	"github.com/gorilla/mux"
-	"github.com/kelseyhightower/envconfig"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/iterator"
@@ -25,22 +24,9 @@ type Entry struct {
 	Date   time.Time `json:"date,omitempty"`
 }
 
-type Config struct {
-	OauthClientId string `split_words:"true"`
-	EntriesLimit  int    `default:"100",split_words:true`
-}
-
 type IndexData struct {
-	Config  Config
+	Config  util.Config
 	Entries []Entry
-}
-
-func trimOauthClientId() {
-	splits := strings.Split(config.OauthClientId, "/")
-	if len(splits) == 1 {
-		return
-	}
-	config.OauthClientId = splits[len(splits)-1]
 }
 
 func createClient(ctx context.Context) *firestore.Client {
@@ -57,19 +43,7 @@ func createClient(ctx context.Context) *firestore.Client {
 	return client
 }
 
-func validate(r *http.Request) (*oauth2.Tokeninfo, error) {
-	idToken := r.Header.Get("Authorization")
-
-	idToken = strings.Replace(idToken, "Bearer ", "", 1)
-
-	oauth2Service, err := oauth2.New(httpClient)
-	tokenInfoCall := oauth2Service.Tokeninfo()
-	tokenInfoCall.IdToken(idToken)
-	tokenInfo, err := tokenInfoCall.Do()
-	return tokenInfo, err
-}
-
-var config Config
+var config util.Config
 var httpClient = &http.Client{}
 var firestoreClient = createClient(context.Background())
 
@@ -151,7 +125,7 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userTokeninfo, authErr := validate(r)
+	userTokeninfo, authErr := util.Validate(r)
 	if authErr != nil {
 		w.Header().Add("Content-Type", "text/html")
 		tmpl.Execute(w, IndexData{config, make([]Entry, 0)})
@@ -172,7 +146,7 @@ func homeLink(w http.ResponseWriter, r *http.Request) {
 }
 
 func createWeight(w http.ResponseWriter, r *http.Request) {
-	userTokeninfo, err := validate(r)
+	userTokeninfo, err := util.Validate(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -196,7 +170,7 @@ func createWeight(w http.ResponseWriter, r *http.Request) {
 }
 
 func listWeights(w http.ResponseWriter, r *http.Request) {
-	userTokeninfo, err := validate(r)
+	userTokeninfo, err := util.Validate(r)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
@@ -216,12 +190,7 @@ func commonMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	err := envconfig.Process("", &config)
-	if err != nil {
-		log.Println("Config could not be loaded.")
-		log.Fatal(err.Error())
-	}
-
+	config = util.ConfigInstance
 	router := mux.NewRouter().StrictSlash(true)
 	router.Use(commonMiddleware)
 	router.HandleFunc("/", homeLink)
